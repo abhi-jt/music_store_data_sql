@@ -1,91 +1,101 @@
--- Create Tables
+-- Create and use the database
+CREATE DATABASE IF NOT EXISTS data;
+USE data;
 
-CREATE TABLE artists (
-  ArtistId INTEGER PRIMARY KEY,
-  Name TEXT
+-- Create artists table
+CREATE TABLE IF NOT EXISTS artists (
+  ArtistId INT PRIMARY KEY,
+  Name VARCHAR(100)
 );
 
-CREATE TABLE albums (
-  AlbumId INTEGER PRIMARY KEY,
-  Title TEXT,
-  ArtistId INTEGER,
+-- Create albums table
+CREATE TABLE IF NOT EXISTS albums (
+  AlbumId INT PRIMARY KEY,
+  Title VARCHAR(200),
+  ArtistId INT,
   FOREIGN KEY (ArtistId) REFERENCES artists(ArtistId)
 );
 
-CREATE TABLE tracks (
-  TrackId INTEGER PRIMARY KEY,
-  Name TEXT,
-  AlbumId INTEGER,
-  MediaTypeId INTEGER,
-  GenreId INTEGER,
-  Milliseconds INTEGER,
-  UnitPrice REAL,
+-- Create tracks table
+CREATE TABLE IF NOT EXISTS tracks (
+  TrackId INT PRIMARY KEY,
+  Name VARCHAR(200),
+  AlbumId INT,
+  MediaTypeId INT,
+  GenreId INT,
+  Milliseconds INT,
+  UnitPrice DECIMAL(5,2),
   FOREIGN KEY (AlbumId) REFERENCES albums(AlbumId)
 );
 
-CREATE TABLE customers (
-  CustomerId INTEGER PRIMARY KEY,
-  FirstName TEXT,
-  LastName TEXT,
-  Email TEXT,
-  Country TEXT
+-- Create customers table
+CREATE TABLE IF NOT EXISTS customers (
+  CustomerId INT PRIMARY KEY,
+  FirstName VARCHAR(100),
+  LastName VARCHAR(100),
+  Email VARCHAR(100),
+  Country VARCHAR(100)
 );
 
-CREATE TABLE invoices (
-  InvoiceId INTEGER PRIMARY KEY,
-  CustomerId INTEGER,
+-- Create invoices table
+CREATE TABLE IF NOT EXISTS invoices (
+  InvoiceId INT PRIMARY KEY,
+  CustomerId INT,
   InvoiceDate DATE,
-  BillingCountry TEXT,
+  BillingCountry VARCHAR(100),
   FOREIGN KEY (CustomerId) REFERENCES customers(CustomerId)
 );
 
-CREATE TABLE invoice_items (
-  InvoiceLineId INTEGER PRIMARY KEY,
-  InvoiceId INTEGER,
-  TrackId INTEGER,
-  UnitPrice REAL,
-  Quantity INTEGER,
+-- Create invoice_items table
+CREATE TABLE IF NOT EXISTS invoice_items (
+  InvoiceLineId INT PRIMARY KEY,
+  InvoiceId INT,
+  TrackId INT,
+  UnitPrice DECIMAL(5,2),
+  Quantity INT,
   FOREIGN KEY (InvoiceId) REFERENCES invoices(InvoiceId),
   FOREIGN KEY (TrackId) REFERENCES tracks(TrackId)
 );
 
--- Queries
+
 
 -- 1. Top 5 best-selling tracks (by quantity)
-SELECT t.Name AS track, SUM(ii.Quantity) AS total_sold
+SELECT t.Name AS Track, SUM(ii.Quantity) AS Total_Sold
 FROM invoice_items ii
 JOIN tracks t ON ii.TrackId = t.TrackId
 GROUP BY t.TrackId, t.Name
-ORDER BY total_sold DESC
+ORDER BY Total_Sold DESC
 LIMIT 5;
 
 -- 2. Revenue by artist
-SELECT ar.Name AS artist, ROUND(SUM(ii.UnitPrice * ii.Quantity),2) AS revenue
+SELECT ar.Name AS Artist, ROUND(SUM(ii.UnitPrice * ii.Quantity), 2) AS Revenue
 FROM invoice_items ii
 JOIN tracks t ON ii.TrackId = t.TrackId
 JOIN albums al ON t.AlbumId = al.AlbumId
 JOIN artists ar ON al.ArtistId = ar.ArtistId
 GROUP BY ar.ArtistId, ar.Name
-ORDER BY revenue DESC;
+ORDER BY Revenue DESC;
 
 -- 3. Total spent per customer
-SELECT c.FirstName || ' ' || c.LastName AS customer,
-ROUND(SUM(ii.UnitPrice * ii.Quantity),2) AS total_spent
+SELECT CONCAT(c.FirstName, ' ', c.LastName) AS Customer,
+ROUND(SUM(ii.UnitPrice * ii.Quantity), 2) AS Total_Spent
 FROM invoice_items ii
 JOIN invoices i ON ii.InvoiceId = i.InvoiceId
 JOIN customers c ON i.CustomerId = c.CustomerId
 GROUP BY c.CustomerId
-ORDER BY total_spent DESC;
+ORDER BY Total_Spent DESC;
 
 -- 4. Sales by country
-SELECT i.BillingCountry AS country, COUNT(DISTINCT i.InvoiceId) AS invoices, ROUND(SUM(ii.UnitPrice * ii.Quantity),2) AS revenue
+SELECT i.BillingCountry AS Country,
+COUNT(DISTINCT i.InvoiceId) AS Invoices,
+ROUND(SUM(ii.UnitPrice * ii.Quantity), 2) AS Revenue
 FROM invoices i
 JOIN invoice_items ii ON i.InvoiceId = ii.InvoiceId
 GROUP BY i.BillingCountry
-ORDER BY revenue DESC;
+ORDER BY Revenue DESC;
 
 -- 5. Tracks never sold
-SELECT t.Name
+SELECT t.Name AS Unsold_Track
 FROM tracks t
 LEFT JOIN invoice_items ii ON t.TrackId = ii.TrackId
-WHERE ii.InvoiceLineId IS NULL;
+WHERE ii.TrackId IS NULL;
